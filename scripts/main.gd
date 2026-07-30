@@ -13,7 +13,7 @@ const PATH_VALLEY_BG := "res://assets/env/valley_bg.png"
 const MAX_LIVES := 3
 const BTN_RUN_PATH := "res://assets/ui/btn_run.png"
 const BTN_JUMP_PATH := "res://assets/ui/btn_jump.png"
-const TOUCH_BTN_SIZE := 130.0
+const TOUCH_BTN_SIZE := 260.0
 const TOUCH_BTN_MARGIN := 28.0
 
 @onready var horse: HorseRunner = $Horse
