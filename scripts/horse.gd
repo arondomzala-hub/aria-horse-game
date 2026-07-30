@@ -9,11 +9,14 @@ const BOOST_SPEED := 520.0
 const JUMP_VELOCITY := -520.0
 const GRAVITY := 1600.0
 const COYOTE_TIME := 0.08
+const LIGHTNING_SPEED_MULT := 1.5
+const LIGHTNING_DURATION := 4.0
 
 const HORSE_SHEET := "res://assets/horses/horse.png"
 const FRAME_COUNT := 6
 const RUN_FPS := 12.0
 const BOOST_ANIM_SCALE := 1.35
+const LIGHTNING_ANIM_SCALE := 1.5
 ## Klatka ma 221 px wysokości; skala 0.45 daje konia ~100 px na ekranie.
 const SPRITE_SCALE := 0.45
 ## Dolna krawędź kolizji ≈ y=14 — stopy sprite'a trafiają w ten poziom.
@@ -27,6 +30,7 @@ var _alive := true
 var _spawn_pos := Vector2.ZERO
 var _speed_mult := 1.0
 var _jump_mult := 1.0
+var _lightning_timer := 0.0
 
 @onready var anim: AnimatedSprite2D = $AnimatedSprite2D
 
@@ -43,6 +47,9 @@ func _physics_process(delta: float) -> void:
 	if not _alive:
 		return
 
+	if _lightning_timer > 0.0:
+		_lightning_timer = maxf(_lightning_timer - delta, 0.0)
+
 	var on_floor := is_on_floor()
 	if on_floor:
 		_coyote = COYOTE_TIME
@@ -51,7 +58,8 @@ func _physics_process(delta: float) -> void:
 		velocity.y += GRAVITY * delta
 
 	var boosting := Input.is_action_pressed("accelerate")
-	var target_speed := (BOOST_SPEED if boosting else BASE_SPEED) * _speed_mult
+	var lightning_mult := LIGHTNING_SPEED_MULT if _lightning_timer > 0.0 else 1.0
+	var target_speed := (BOOST_SPEED if boosting else BASE_SPEED) * _speed_mult * lightning_mult
 	velocity.x = target_speed
 
 	if Input.is_action_just_pressed("jump") and _coyote > 0.0:
@@ -60,14 +68,24 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
-	# Boost przyspiesza tylko tempo klatek — animacja pozostaje jedna.
-	anim.speed_scale = BOOST_ANIM_SCALE if boosting else 1.0
+	# Boost / lightning przyspieszają tylko tempo klatek — animacja pozostaje jedna.
+	if _lightning_timer > 0.0:
+		anim.speed_scale = LIGHTNING_ANIM_SCALE
+	elif boosting:
+		anim.speed_scale = BOOST_ANIM_SCALE
+	else:
+		anim.speed_scale = 1.0
+
+
+func apply_lightning_boost() -> void:
+	_lightning_timer = LIGHTNING_DURATION
 
 
 func kill() -> void:
 	if not _alive:
 		return
 	_alive = false
+	_lightning_timer = 0.0
 	velocity = Vector2.ZERO
 	anim.pause()
 	died.emit()
@@ -78,6 +96,7 @@ func respawn() -> void:
 	velocity = Vector2.ZERO
 	_alive = true
 	_coyote = 0.0
+	_lightning_timer = 0.0
 	set_physics_process(true)
 	anim.speed_scale = 1.0
 	anim.play("run")

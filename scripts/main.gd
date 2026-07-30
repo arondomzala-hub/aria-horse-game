@@ -2,6 +2,7 @@ extends Node2D
 
 ## Generowana trasa Valley: panorama tła + przeszkody + gwiazdy.
 ## Kolejne poziomy generowane proceduralnie; 3 życia, serca na parzystych poziomach.
+## Jeden lightning na poziom (pierwsza połowa trasy).
 
 const GROUND_Y := 520.0
 const TRACK_END := 5200.0
@@ -11,6 +12,15 @@ const STAR_PATH := "res://assets/star.png"
 const HEART_PATH := "res://assets/heart.png"
 const PATH_VALLEY_BG := "res://assets/env/valley_bg.png"
 const MAX_LIVES := 3
+## Wysokość gwiazd: zawsze w zasięgu biegu bez skoku (hitbox konia ~y 464–520).
+const STAR_HEIGHT_MIN := 40.0
+const STAR_HEIGHT_MAX := 52.0
+## Wysokość lightning: wymaga skoku.
+const LIGHTNING_HEIGHT_MIN := 125.0
+const LIGHTNING_HEIGHT_MAX := 150.0
+## Extra miejsce przed lightning (rozbieg) i po nim (lądowanie).
+const LIGHTNING_EXTRA_BEFORE := 320.0
+const LIGHTNING_EXTRA_AFTER := 300.0
 const BTN_RUN_PATH := "res://assets/ui/btn_run.png"
 const BTN_JUMP_PATH := "res://assets/ui/btn_jump.png"
 const ARIA_PORTRAIT_PATH := "res://assets/aria_portrait.png"
@@ -191,6 +201,10 @@ func _on_heart_collected(_heart: HeartPickup) -> void:
 		_update_lives_hud()
 
 
+func _on_lightning_collected(_lightning: LightningPickup) -> void:
+	horse.apply_lightning_boost()
+
+
 func _update_star_hud() -> void:
 	star_count_label.text = str(_stars_collected)
 
@@ -283,7 +297,7 @@ func _load_texture(path: String) -> Texture2D:
 	return tex
 
 
-## Buduje przeszkody, gwiazdki i (na parzystych poziomach) serce dla `_level`.
+## Buduje przeszkody, gwiazdki, 1× lightning (pierwsza połowa) i serce (parzyste).
 func _build_level() -> void:
 	if is_instance_valid(_track):
 		_track.queue_free()
@@ -304,27 +318,42 @@ func _build_level() -> void:
 	var spacing_min := maxf(600.0 - (_level - 1) * 15.0, 480.0)
 	var spacing_max := maxf(800.0 - (_level - 1) * 15.0, 640.0)
 
+	# Pozycje X przeszkód (jeszcze bez poszerzania luki na lightning).
 	var obstacle_xs: Array[float] = []
 	var x := 900.0
 	while x <= TRACK_END - 400.0:
-		_spawn_obstacle(x, kinds[rng.randi_range(0, kinds.size() - 1)])
 		obstacle_xs.append(x)
 		x += rng.randf_range(spacing_min, spacing_max)
 
-	# Gwiazdki: przed pierwszą przeszkodą i w połowie każdego odstępu —
-	# zawsze z dala od przeszkód.
-	var pickup_xs: Array[float] = [350.0, 600.0]
+	# Jeden lightning w pierwszej połowie trasy — większy rozbieg przed i lądowanie po.
+	var lightning_gap := -1
+	if obstacle_xs.size() >= 3:
+		var half_gaps := maxi(1, int((obstacle_xs.size() - 1) / 2.0))
+		lightning_gap = rng.randi_range(0, half_gaps - 1)
+		var shift := LIGHTNING_EXTRA_BEFORE + LIGHTNING_EXTRA_AFTER
+		for i in range(lightning_gap + 1, obstacle_xs.size()):
+			obstacle_xs[i] += shift
+
+	for ox in obstacle_xs:
+		if ox >= _finish_x - 80.0:
+			continue
+		_spawn_obstacle(ox, kinds[rng.randi_range(0, kinds.size() - 1)])
+
+	# Gwiazdki dopiero po pierwszej przeszkodzie (bez luki z lightning).
+	var pickup_xs: Array[float] = []
 	for i in obstacle_xs.size() - 1:
+		if i == lightning_gap:
+			continue
 		pickup_xs.append((obstacle_xs[i] + obstacle_xs[i + 1]) * 0.5)
 	pickup_xs.append(minf(obstacle_xs[-1] + 300.0, _finish_x - 120.0))
 
 	# Na parzystych poziomach jeden środkowy slot zajmuje serce.
 	var heart_index := -1
-	if _level % 2 == 0 and pickup_xs.size() > 2:
-		heart_index = 2 + int((pickup_xs.size() - 2) / 2.0)
+	if _level % 2 == 0 and pickup_xs.size() > 1:
+		heart_index = int(pickup_xs.size() / 2.0)
 
 	for i in pickup_xs.size():
-		var pos := Vector2(pickup_xs[i], GROUND_Y - rng.randf_range(70.0, 100.0))
+		var pos := Vector2(pickup_xs[i], GROUND_Y - rng.randf_range(STAR_HEIGHT_MIN, STAR_HEIGHT_MAX))
 		if i == heart_index:
 			var heart := HeartPickup.new()
 			heart.position = pos
@@ -335,6 +364,17 @@ func _build_level() -> void:
 			star.position = pos
 			star.collected.connect(_on_star_collected)
 			_track.add_child(star)
+
+	# Lightning: po dłuższym rozbiegu, wysoko (skok), potem miejsce na lądowanie.
+	if lightning_gap >= 0:
+		var x0 := obstacle_xs[lightning_gap]
+		var x1 := obstacle_xs[lightning_gap + 1]
+		var lx := x0 + LIGHTNING_EXTRA_BEFORE + (x1 - x0 - LIGHTNING_EXTRA_BEFORE - LIGHTNING_EXTRA_AFTER) * 0.35
+		var ly := GROUND_Y - rng.randf_range(LIGHTNING_HEIGHT_MIN, LIGHTNING_HEIGHT_MAX)
+		var bolt := LightningPickup.new()
+		bolt.position = Vector2(lx, ly)
+		bolt.collected.connect(_on_lightning_collected)
+		_track.add_child(bolt)
 
 
 func _build_background() -> void:
