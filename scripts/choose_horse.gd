@@ -27,7 +27,7 @@ func _build_horse_buttons() -> void:
 
 func _make_horse_card(id: GameState.HorseId) -> Button:
 	var btn := Button.new()
-	btn.custom_minimum_size = Vector2(190, 290)
+	btn.custom_minimum_size = Vector2(190, 320)
 	btn.focus_mode = Control.FOCUS_ALL
 	btn.clip_contents = true
 
@@ -60,26 +60,49 @@ func _make_horse_card(id: GameState.HorseId) -> Button:
 	btn.add_theme_stylebox_override("pressed", style_hover)
 	btn.add_theme_stylebox_override("focus", style_hover)
 
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vbox.offset_left = 8
+	vbox.offset_top = 8
+	vbox.offset_right = -8
+	vbox.offset_bottom = -8
+	vbox.add_theme_constant_override("separation", 4)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(vbox)
+
 	var tex := TextureRect.new()
-	tex.set_anchors_preset(Control.PRESET_FULL_RECT)
-	tex.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	tex.offset_left = 8
-	tex.offset_top = 8
-	tex.offset_right = -8
-	tex.offset_bottom = -8
+	tex.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tex.custom_minimum_size = Vector2(0, 180)
 	tex.texture = GameState.get_horse_atlas(id)
 	tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	btn.add_child(tex)
+	vbox.add_child(tex)
+
+	var name_label := Label.new()
+	name_label.text = GameState.HORSE_NAMES[id]
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_size_override("font_size", 20)
+	name_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.95))
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(name_label)
+
+	var stats_label := Label.new()
+	stats_label.text = GameState.get_stats_label(id)
+	stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stats_label.add_theme_font_size_override("font_size", 14)
+	stats_label.add_theme_color_override("font_color", Color(0.85, 0.7, 0.78))
+	stats_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(stats_label)
 
 	btn.pressed.connect(func() -> void: _select_horse(id))
-	btn.tooltip_text = GameState.HORSE_NAMES[id]
+	btn.tooltip_text = "%s\n%s" % [GameState.HORSE_NAMES[id], GameState.get_stats_label(id)]
 	return btn
 
 
 func _select_horse(id: GameState.HorseId) -> void:
 	GameState.selected_horse = id
+	MusicPlayer.start()
 	get_tree().change_scene_to_file(GAME_SCENE)
 
 

@@ -15,6 +15,16 @@ const HORSE_NAMES := {
 	HorseId.PINKI: "Pinki",
 }
 
+## Multiplikatory względem bazowej prędkości / długości skoku (1.0 = bez zmian).
+const HORSE_STATS := {
+	HorseId.WEX: {"speed": 0.90, "jump": 1.00},
+	HorseId.HAROLD: {"speed": 1.20, "jump": 1.00},
+	HorseId.ARPACO: {"speed": 1.00, "jump": 1.20},
+	HorseId.FIRO: {"speed": 1.10, "jump": 1.00},
+	HorseId.PTYS: {"speed": 1.10, "jump": 1.15},
+	HorseId.PINKI: {"speed": 0.90, "jump": 1.00},
+}
+
 const MENU_BG_PATH := "res://assets/menu_bg.png"
 const SHEET_PATH := "res://assets/horses_sheet.png"
 const SHEET_COLS := 3
@@ -81,6 +91,29 @@ func add_score(player_name: String, level: int, stars: int) -> void:
 	if scores.size() > LEADERBOARD_MAX:
 		scores.resize(LEADERBOARD_MAX)
 	save_scores()
+
+
+func get_speed_mult(id: HorseId = selected_horse) -> float:
+	return float(HORSE_STATS[id]["speed"])
+
+
+func get_jump_mult(id: HorseId = selected_horse) -> float:
+	return float(HORSE_STATS[id]["jump"])
+
+
+func get_stats_label(id: HorseId) -> String:
+	var parts: PackedStringArray = []
+	var speed := get_speed_mult(id)
+	var jump := get_jump_mult(id)
+	if not is_equal_approx(speed, 1.0):
+		var speed_pct := int(round((speed - 1.0) * 100.0))
+		parts.append("%+d%% speed" % speed_pct)
+	if not is_equal_approx(jump, 1.0):
+		var jump_pct := int(round((jump - 1.0) * 100.0))
+		parts.append("%+d%% jump" % jump_pct)
+	if parts.is_empty():
+		return "—"
+	return "\n".join(parts)
 
 
 func get_menu_background() -> Texture2D:

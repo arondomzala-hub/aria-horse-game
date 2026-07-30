@@ -13,6 +13,8 @@ const PATH_VALLEY_BG := "res://assets/env/valley_bg.png"
 const MAX_LIVES := 3
 const BTN_RUN_PATH := "res://assets/ui/btn_run.png"
 const BTN_JUMP_PATH := "res://assets/ui/btn_jump.png"
+const ARIA_PORTRAIT_PATH := "res://assets/aria_portrait.png"
+const ARIA_LOGO_PATH := "res://assets/aria_logo.png"
 const TOUCH_BTN_SIZE := 260.0
 const TOUCH_BTN_MARGIN := 28.0
 
@@ -20,6 +22,7 @@ const TOUCH_BTN_MARGIN := 28.0
 @onready var camera: Camera2D = $Horse/Camera2D
 @onready var world: Node2D = $World
 @onready var hud: CanvasLayer = $HUD
+@onready var logo: TextureRect = $HUD/Logo
 @onready var hint_label: Label = $HUD/Hint
 @onready var level_label: Label = $HUD/LevelLabel
 @onready var status_label: Label = $HUD/Status
@@ -28,8 +31,9 @@ const TOUCH_BTN_MARGIN := 28.0
 @onready var star_icon: TextureRect = $HUD/StarCounter/Icon
 @onready var lives_box: HBoxContainer = $HUD/Lives
 @onready var game_over_dialog: Control = $HUD/GameOverDialog
-@onready var game_over_info: Label = $HUD/GameOverDialog/Panel/VBox/Info
-@onready var name_edit: LineEdit = $HUD/GameOverDialog/Panel/VBox/NameEdit
+@onready var game_over_portrait: TextureRect = $HUD/GameOverDialog/Center/Content/Portrait
+@onready var game_over_info: Label = $HUD/GameOverDialog/Center/Content/Panel/VBox/Info
+@onready var name_edit: LineEdit = $HUD/GameOverDialog/Center/Content/Panel/VBox/NameEdit
 @onready var level_complete_dialog: Control = $HUD/LevelCompleteDialog
 @onready var level_complete_title: Label = $HUD/LevelCompleteDialog/Panel/VBox/Title
 
@@ -56,6 +60,7 @@ func _ready() -> void:
 	horse.died.connect(_on_horse_died)
 	hint_label.text = "Space — jump   |   A — boost   |   Esc — quit"
 	status_label.text = ""
+	logo.texture = _load_texture(ARIA_LOGO_PATH)
 	star_icon.texture = _load_texture(STAR_PATH)
 	_update_star_hud()
 	_setup_lives_hud()
@@ -65,7 +70,8 @@ func _ready() -> void:
 	$HUD/QuitDialog/Panel/VBox/Buttons/Yes.pressed.connect(_on_quit_yes)
 	$HUD/QuitDialog/Panel/VBox/Buttons/No.pressed.connect(_on_quit_no)
 	game_over_dialog.visible = false
-	$HUD/GameOverDialog/Panel/VBox/Save.pressed.connect(_on_game_over_save)
+	game_over_portrait.texture = _load_texture(ARIA_PORTRAIT_PATH)
+	$HUD/GameOverDialog/Center/Content/Panel/VBox/Save.pressed.connect(_on_game_over_save)
 	name_edit.text_submitted.connect(func(_text: String) -> void: _on_game_over_save())
 	level_complete_dialog.visible = false
 	$HUD/LevelCompleteDialog/Panel/VBox/Next.pressed.connect(_on_next_level_pressed)
@@ -245,16 +251,31 @@ func _position_touch_controls() -> void:
 func _load_texture(path: String) -> Texture2D:
 	if _tex_cache.has(path):
 		return _tex_cache[path]
-	var abs_path := ProjectSettings.globalize_path(path)
 	var img := Image.new()
 	var tex: Texture2D
-	if img.load(abs_path) == OK:
+	var loaded := false
+
+	# Prefer buffer load — more reliable than filesystem path (Unicode / import issues).
+	if FileAccess.file_exists(path):
+		var bytes := FileAccess.get_file_as_bytes(path)
+		if bytes.size() > 0 and img.load_png_from_buffer(bytes) == OK:
+			loaded = true
+
+	if not loaded:
+		var abs_path := ProjectSettings.globalize_path(path)
+		if img.load(abs_path) == OK:
+			loaded = true
+
+	if loaded:
+		if img.get_format() != Image.FORMAT_RGBA8:
+			img.convert(Image.FORMAT_RGBA8)
 		tex = ImageTexture.create_from_image(img)
 	else:
 		var res := ResourceLoader.load(path)
 		if res is Texture2D and (res as Texture2D).get_width() > 0:
 			tex = res
 		else:
+			push_error("Failed to load texture: %s" % path)
 			var fallback := Image.create(8, 8, false, Image.FORMAT_RGBA8)
 			fallback.fill(Color(0.5, 0.6, 0.4))
 			tex = ImageTexture.create_from_image(fallback)
@@ -277,6 +298,7 @@ func _build_level() -> void:
 		Obstacle.Kind.PUDDLE,
 		Obstacle.Kind.LOG,
 		Obstacle.Kind.HURDLE,
+		Obstacle.Kind.ARIA_CROSS,
 	]
 	# Odstępy maleją z poziomem (więcej przeszkód), ale z bezpiecznym minimum.
 	var spacing_min := maxf(600.0 - (_level - 1) * 15.0, 480.0)

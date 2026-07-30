@@ -8,7 +8,7 @@ BG_THRESH = 10
 ALPHA_MIN = 8
 PAD = 2
 
-NAMES = ["cross", "puddle", "fallen_tree"]
+NAMES = ["cross", "puddle", "fallen_tree", "aria_cross"]
 
 
 def key_black_to_alpha(im: Image.Image) -> Image.Image:

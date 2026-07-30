@@ -3,10 +3,11 @@ class_name Obstacle
 
 ## Przeszkoda-hazard: kontakt zabija konia (chyba że skacze nad nią).
 
-enum Kind { HURDLE, PUDDLE, LOG, HALE }
+enum Kind { HURDLE, PUDDLE, LOG, HALE, ARIA_CROSS }
 
 const HAY_PATH := "res://assets/env/hay_bale.png"
 const CROSS_PATH := "res://assets/obstacles/cross.png"
+const ARIA_CROSS_PATH := "res://assets/obstacles/aria_cross.png"
 const PUDDLE_PATH := "res://assets/obstacles/puddle.png"
 const TREE_PATH := "res://assets/obstacles/fallen_tree.png"
 
@@ -36,6 +37,10 @@ func _build() -> void:
 			_build_sprite_obstacle(TREE_PATH, 39.0, 0.58, 0.66, 6.0)
 		Kind.HALE:
 			_build_sprite_obstacle(HAY_PATH, 40.0, 0.58, 0.7, 6.0)
+		Kind.ARIA_CROSS:
+			# Stacjonata Aria — słupki z głowami koni wyższe niż belki;
+			# hitbox na wysokości skokowych żerdzi.
+			_build_sprite_obstacle(ARIA_CROSS_PATH, 48.0, 0.52, 0.58, 5.0)
 
 
 func _build_sprite_obstacle(path: String, target_h: float, col_w_frac: float, col_h_frac: float, sink: float) -> void:

@@ -25,12 +25,16 @@ signal finished
 var _coyote := 0.0
 var _alive := true
 var _spawn_pos := Vector2.ZERO
+var _speed_mult := 1.0
+var _jump_mult := 1.0
 
 @onready var anim: AnimatedSprite2D = $AnimatedSprite2D
 
 
 func _ready() -> void:
 	_spawn_pos = global_position
+	_speed_mult = GameState.get_speed_mult()
+	_jump_mult = GameState.get_jump_mult()
 	_setup_animations()
 	anim.play("run")
 
@@ -47,11 +51,11 @@ func _physics_process(delta: float) -> void:
 		velocity.y += GRAVITY * delta
 
 	var boosting := Input.is_action_pressed("accelerate")
-	var target_speed := BOOST_SPEED if boosting else BASE_SPEED
+	var target_speed := (BOOST_SPEED if boosting else BASE_SPEED) * _speed_mult
 	velocity.x = target_speed
 
 	if Input.is_action_just_pressed("jump") and _coyote > 0.0:
-		velocity.y = JUMP_VELOCITY
+		velocity.y = JUMP_VELOCITY * _jump_mult
 		_coyote = 0.0
 
 	move_and_slide()
