@@ -1,0 +1,28 @@
+[gd_scene load_steps=3 format=3 uid="uid://bhorse001aria"]
+
+[ext_resource type="Script" path="res://scripts/horse.gd" id="1_horse"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_horse"]
+size = Vector2(80, 56)
+
+[node name="Horse" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 1
+floor_stop_on_slope = false
+script = ExtResource("1_horse")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(4, -14)
+shape = SubResource("RectangleShape2D_horse")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(0, -36)
+scale = Vector2(0.45, 0.45)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(180, -80)
+offset = Vector2(120, -40)
+limit_left = 0
+limit_bottom = 720
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0

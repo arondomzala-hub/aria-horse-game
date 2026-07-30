@@ -1,0 +1,12 @@
+# Godot 4
+.godot/
+*.translation
+export.cfg
+*.tmp
+*.TMP
+.mono/
+data_*/
+android/
+
+# Local export output
+build/
